@@ -61,7 +61,7 @@
     import { auth, db } from './firebase.js';
     import { onAuthStateChanged, signOut }
       from "https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js";
-    import { doc, getDoc }
+    import { doc, onSnapshot }
       from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
 
     var authTimeout = setTimeout(function() {
@@ -69,22 +69,44 @@
       document.getElementById('emailVal').textContent = '(offline)';
     }, 5000);
 
-    onAuthStateChanged(auth, async function(user) {
-      clearTimeout(authTimeout);
-      if (!user) { location.href = 'index.html'; return; }
-      document.getElementById('emailVal').textContent = user.email || '—';
-      try {
-        var snap = await getDoc(doc(db, 'users', user.uid));
+    var unsubUser = null;
+    function subscribeUserDoc(uid, fallbackEmail) {
+      if (unsubUser) { unsubUser(); unsubUser = null; }
+      document.getElementById('emailVal').textContent = fallbackEmail || '—';
+      unsubUser = onSnapshot(doc(db, 'users', uid), function(snap) {
         var data = snap.data() || {};
         document.getElementById('nameVal').textContent  = data.name || '—';
+        document.getElementById('emailVal').textContent = data.email || fallbackEmail || '—';
         document.getElementById('countVal').textContent = (data.record_count || 0) + '';
         document.getElementById('stageVal').textContent = data.tree_stage || 'seed';
-      } catch(e) { console.log('load settings error:', e.message); }
+      }, function(err) {
+        console.log('settings snapshot error:', err.message);
+      });
+    }
+
+    onAuthStateChanged(auth, function(user) {
+      clearTimeout(authTimeout);
+      if (user) {
+        subscribeUserDoc(user.uid, user.email);
+        return;
+      }
+      var lsUid   = localStorage.getItem('plunk_uid');
+      var lsEmail = localStorage.getItem('plunk_email');
+      if (lsUid) {
+        subscribeUserDoc(lsUid, lsEmail);
+        return;
+      }
+      location.href = 'index.html';
     });
 
     document.getElementById('signoutBtn').addEventListener('click', async function() {
-      try { await signOut(auth); location.href = 'index.html'; }
-      catch(e) { alert('Sign out failed: ' + e.message); }
+      try {
+        localStorage.removeItem('plunk_uid');
+        localStorage.removeItem('plunk_email');
+        localStorage.removeItem('plunk_name');
+        try { await signOut(auth); } catch(e) { /* 没登 Firebase Auth 也无所谓 */ }
+        location.href = 'index.html';
+      } catch(e) { alert('Sign out failed: ' + e.message); }
     });
   </script>
 

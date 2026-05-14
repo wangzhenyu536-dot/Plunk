@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Plunk - Register</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="page">
+    <h2>What's your name?</h2>
+
+    <input type="text"   id="nameInput"  placeholder="Your name"  class="input-field">
+    <input type="email"  id="emailInput" placeholder="Your email" class="input-field">
+    <input type="password" id="passInput" placeholder="Password (6+ characters)" class="input-field">
+
+    <button id="registerBtn">Plant your seed 🌱</button>
+    <p id="errorMsg" style="color:red; margin-top:16px"></p>
+  </div>
+
+  <script type="module">
+    import { auth, db } from './firebase.js';
+    import { createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js";
+    import { doc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
+
+    document.getElementById('registerBtn').addEventListener('click', async () => {
+      const name  = document.getElementById('nameInput').value;
+      const email = document.getElementById('emailInput').value;
+      const pass  = document.getElementById('passInput').value;
+      const errEl = document.getElementById('errorMsg');
+
+      // 检查不能为空
+      if (!name || !email || !pass) {
+        errEl.textContent = "Please fill in all fields.";
+        return;
+      }
+
+      try {
+        // 1. 在Firebase Auth创建账号
+        const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
+        const user = userCredential.user;
+
+        // 2. 在Firestore存用户信息
+        await setDoc(doc(db, "users", user.uid), {
+          id: user.uid,
+          name: name,
+          email: email,
+          record_count: 0,
+          tree_stage: "seed",   // 从种子开始
+          created_at: serverTimestamp()
+        });
+
+        // 3. 注册成功，跳转到首页
+        window.location.href = 'home.html';
+
+      } catch (error) {
+        // 出错了，告诉用户
+        if (error.code === 'auth/email-already-in-use') {
+          errEl.textContent = "Email already registered. Please log in.";
+        } else {
+          errEl.textContent = error.message;
+        }
+      }
+    });
+  </script>
+</body>
+</html>

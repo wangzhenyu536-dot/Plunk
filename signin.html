@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Plunk - Sign in</title>
+  <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;1,400;1,500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+
+    :root {
+      --bg:     #EDEEE0;
+      --text:   #3A3928;
+      --olive:  #596828;
+      --sub:    #8A8C6A;
+      --border: rgba(80,90,40,0.18);
+      --btn:    #566B2C;
+      --btn2:   #44551F;
+    }
+
+    html, body {
+      width:100%; min-height:100%;
+      background: var(--bg);
+      font-family: 'DM Sans', sans-serif;
+      color: var(--text);
+    }
+
+    body {
+      display:flex; flex-direction:column;
+      align-items:center; justify-content:flex-start;
+      padding-top:96px; padding-bottom:60px;
+    }
+
+    /* ── LOGO ── */
+    .topbar {
+      position:fixed; top:0; left:0; right:0; z-index:200;
+      padding: 20px 22px;
+      pointer-events:none;
+    }
+    .logo {
+      display:flex; align-items:center; gap:7px;
+      font-family:'DM Sans',sans-serif;
+      font-size:13px; font-weight:500;
+      letter-spacing:0.1em; color:var(--text);
+    }
+
+    /* ── 表单容器 ── */
+    .form-wrap {
+      width:100%; max-width:402px;
+      padding: 0 22px;
+    }
+
+    .form-header {
+      text-align:center; margin-bottom:28px;
+    }
+    .sprout-box {
+      width:56px; height:56px;
+      background:#fff;
+      border-radius:14px;
+      display:flex; align-items:center; justify-content:center;
+      margin:0 auto 14px;
+      box-shadow:0 2px 12px rgba(0,0,0,0.08);
+      font-size:28px;
+    }
+    .form-title {
+      font-family:'Lora',serif;
+      font-size:26px; font-weight:500;
+      color:var(--olive); margin-bottom:5px;
+      line-height:1.2;
+    }
+    .form-sub {
+      font-family:'Lora',serif;
+      font-style:italic; font-size:13px;
+      color:var(--sub);
+    }
+
+    /* ── 输入框 ── */
+    .field {
+      position:relative; margin-bottom:12px;
+      background:#fff;
+      border:1.5px solid var(--border);
+      border-radius:14px;
+      padding:12px 48px 12px 16px;
+      transition: border-color .2s;
+    }
+    .field:focus-within { border-color: var(--olive); }
+    .field-label {
+      display:block;
+      font-size:12px; font-weight:500;
+      color:var(--text); margin-bottom:4px;
+      font-family:'DM Sans',sans-serif;
+    }
+    .field input {
+      width:100%; border:none; outline:none;
+      background:transparent;
+      font-size:14px; color:var(--text);
+      font-family:'DM Sans',sans-serif;
+    }
+    .field input::placeholder { color:#B8BAA0; }
+    .field-icon {
+      position:absolute; right:14px; top:50%;
+      transform:translateY(-50%);
+      color:var(--sub); opacity:0.5;
+      font-size:15px; pointer-events:none;
+    }
+
+    /* ── 按钮 ── */
+    .login-btn {
+      width:100%; padding:17px; border:none;
+      border-radius:50px;
+      background:var(--btn); color:#fff;
+      font-family:'DM Sans',sans-serif;
+      font-size:16px; font-weight:500;
+      cursor:pointer; margin-top:8px;
+      transition:background .2s, transform .1s;
+    }
+    .login-btn:hover  { background:var(--btn2); }
+    .login-btn:active { transform:scale(0.98); }
+    .login-btn:disabled { opacity:0.5; cursor:not-allowed; }
+
+    #errMsg {
+      color:#B94040; font-size:12px;
+      text-align:center; min-height:18px;
+      margin-bottom:8px;
+      font-family:'DM Sans',sans-serif;
+    }
+
+    .footer-link {
+      margin-top:22px;
+      text-align:center;
+      font-size:13px;
+      color:var(--sub);
+      font-family:'DM Sans',sans-serif;
+    }
+    .footer-link a {
+      color:var(--olive);
+      font-weight:500;
+      text-decoration:none;
+    }
+    .footer-link a:hover { text-decoration:underline; }
+  </style>
+</head>
+<body>
+
+  <!-- LOGO -->
+  <div class="topbar">
+    <div class="logo">✦ PLUNK</div>
+  </div>
+
+  <div class="form-wrap">
+
+    <div class="form-header">
+      <div class="sprout-box">🌿</div>
+      <h1 class="form-title">Welcome back</h1>
+      <p class="form-sub">The tree remembers you</p>
+    </div>
+
+    <div class="field">
+      <span class="field-label">Your email address</span>
+      <input id="emailIn" type="email" autocomplete="email" placeholder="hello@growth.com">
+      <span class="field-icon">✉</span>
+    </div>
+
+    <p id="errMsg"></p>
+
+    <button class="login-btn" id="loginBtn">Continue growing 🌿</button>
+    <p style="text-align:center;font-size:11px;color:var(--sub);font-family:'DM Sans',sans-serif;margin-top:10px;font-style:italic;">
+      No password needed. Just your email.
+    </p>
+
+    <p class="footer-link">
+      Don't have an account? <a href="log-in.html">Plant your seed</a>
+    </p>
+
+  </div>
+
+  <script type="module">
+    import { db } from './firebase.js';
+    import { collection, query, where, getDocs, limit }
+      from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
+
+    const btn   = document.getElementById('loginBtn');
+    const emEl  = document.getElementById('emailIn');
+    const errEl = document.getElementById('errMsg');
+
+    async function doLogin() {
+      const email = emEl.value.trim().toLowerCase();
+      errEl.textContent = '';
+
+      if (!email) {
+        errEl.textContent = 'Please enter your email.';
+        return;
+      }
+      if (!/^\S+@\S+\.\S+$/.test(email)) {
+        errEl.textContent = 'Invalid email address.';
+        return;
+      }
+
+      btn.disabled    = true;
+      btn.textContent = 'Growing...';
+
+      try {
+        const q = query(
+          collection(db, 'users'),
+          where('email', '==', email),
+          limit(1)
+        );
+        const snap = await getDocs(q);
+
+        if (snap.empty) {
+          errEl.textContent = 'Email not registered. Please plant your seed first.';
+          btn.disabled    = false;
+          btn.textContent = 'Continue growing 🌿';
+          return;
+        }
+
+        const userDoc = snap.docs[0];
+        localStorage.setItem('plunk_uid',   userDoc.id);
+        localStorage.setItem('plunk_email', email);
+        localStorage.setItem('plunk_name',  userDoc.data().name || '');
+
+        window.location.href = 'home.html';
+      } catch (e) {
+        errEl.textContent = e.message || 'Something went wrong. Please try again.';
+        btn.disabled    = false;
+        btn.textContent = 'Continue growing 🌿';
+      }
+    }
+
+    btn.addEventListener('click', doLogin);
+    emEl.addEventListener('keydown', (e) => { if (e.key === 'Enter') doLogin(); });
+  </script>
+
+</body>
+</html>

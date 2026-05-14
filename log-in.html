@@ -522,7 +522,7 @@
     document.getElementById('dotsEl').style.display = n===3 ? 'none' : 'flex';
   }
 
-  function goLogin() { location.href = 'home.html'; }
+  function goLogin() { location.href = 'signin.html'; }
 
   // 触摸滑动（仅前3页）
   var tx = 0;
@@ -539,13 +539,10 @@
 
 <!-- Firebase -->
 <script type="module">
-  import { auth, db } from './firebase.js';
+  import { db } from './firebase.js';
   import {
-    createUserWithEmailAndPassword,
-    updateProfile
-  } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js";
-  import { doc, setDoc, serverTimestamp }
-    from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
+    collection, addDoc, query, where, getDocs, limit, serverTimestamp
+  } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
 
   var _verifyCode  = '';
   var _verifyEmail = '';
@@ -613,7 +610,7 @@
   // ── 注册 ────────────────────────────────────────────────
   window.doRegister = async function() {
     var name  = document.getElementById('nameIn').value.trim();
-    var email = document.getElementById('emailIn').value.trim();
+    var email = document.getElementById('emailIn').value.trim().toLowerCase();
     var code  = document.getElementById('codeIn').value.trim();
     var err   = document.getElementById('errMsg');
     var btn   = document.getElementById('regBtn');
@@ -636,11 +633,21 @@
     btn.textContent  = 'Planting...';
 
     try {
-      // 用验证码+随机字符串作为密码（用户无需记住密码）
-      var tempPass = _verifyCode + Math.random().toString(36).slice(-8) + 'Aa1!';
-      var cred = await createUserWithEmailAndPassword(auth, email, tempPass);
-      await updateProfile(cred.user, { displayName: name });
-      await setDoc(doc(db, 'users', cred.user.uid), {
+      // 1. 查重：Firestore 中是否已有这个邮箱
+      var dup = await getDocs(query(
+        collection(db, 'users'),
+        where('email', '==', email),
+        limit(1)
+      ));
+      if (!dup.empty) {
+        err.textContent = 'Email already registered. Please log in.';
+        btn.disabled    = false;
+        btn.textContent = 'Start planting';
+        return;
+      }
+
+      // 2. 写 Firestore（自动 doc id 当 uid，不再用 Firebase Auth）
+      var docRef = await addDoc(collection(db, 'users'), {
         name:         name,
         email:        email,
         record_count: 0,
@@ -648,19 +655,16 @@
         created_at:   serverTimestamp()
       });
 
+      // 3. 把登录态写入 localStorage（供 home.html / settings.html 识别）
+      localStorage.setItem('plunk_uid',   docRef.id);
+      localStorage.setItem('plunk_email', email);
+      localStorage.setItem('plunk_name',  name);
+
       // ✅ 注册成功 → 跳转首页
       window.location.href = 'home.html';
 
     } catch(e) {
-      if (e.code === 'auth/email-already-in-use')
-        err.textContent = 'Email already registered. Please log in.';
-      else if (e.code === 'auth/invalid-email')
-        err.textContent = 'Invalid email address.';
-      else if (e.code === 'auth/weak-password')
-        err.textContent = 'Something went wrong. Please try again.';
-      else
-        err.textContent = e.message;
-
+      err.textContent = e.message || 'Something went wrong. Please try again.';
       btn.disabled    = false;
       btn.textContent = 'Start planting';
     }

@@ -252,7 +252,7 @@
     import { auth, db } from './firebase.js';
     import { onAuthStateChanged }
       from "https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js";
-    import { doc, getDoc, collection, addDoc, updateDoc, increment, serverTimestamp }
+    import { doc, onSnapshot, collection, addDoc, updateDoc, increment, serverTimestamp }
       from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
 
     var treeSvgs = {
@@ -313,13 +313,10 @@
       document.body.appendChild(bar);
     }, 5000);
 
-    // 登录检查 + 显示对应的树
-    onAuthStateChanged(auth, async function(user) {
-      clearTimeout(authTimeout);
-      if (!user) { location.href = 'index.html'; return; }
-      currentUser = user;   // 写入全局变量
-      try {
-        var snap = await getDoc(doc(db, 'users', user.uid));
+    var unsubUser = null;
+    function subscribeTreeForUid(uid) {
+      if (unsubUser) { unsubUser(); unsubUser = null; }
+      unsubUser = onSnapshot(doc(db, 'users', uid), function(snap) {
         var data = snap.data();
         var count = (data && data.record_count) || 0;
         var stage = 'seed';
@@ -328,7 +325,28 @@
         else if (count >= 10)  stage = 'small';
         else if (count >= 1)   stage = 'sprout';
         renderTree(stage);
-      } catch(e) { console.log('load tree error:', e.message); }
+      }, function(err) {
+        console.log('tree snapshot error:', err.message);
+      });
+    }
+
+    // 登录检查 + 实时订阅树状态
+    onAuthStateChanged(auth, function(user) {
+      clearTimeout(authTimeout);
+      if (user) {
+        currentUser = user;
+        subscribeTreeForUid(user.uid);
+        return;
+      }
+      // 没有 Firebase Auth 登录态 → 看看 localStorage 有没有(无密码登录走这里)
+      var lsUid   = localStorage.getItem('plunk_uid');
+      var lsEmail = localStorage.getItem('plunk_email');
+      if (lsUid) {
+        currentUser = { uid: lsUid, email: lsEmail || '' };
+        subscribeTreeForUid(lsUid);
+        return;
+      }
+      location.href = 'index.html';
     });
 
     // 把存储函数暴露给普通 script
@@ -361,7 +379,6 @@
         uploadedImages = [];
         renderPreviews();
         closePanel();
-        location.reload();
       } catch(e) {
         alert('Save failed: ' + e.message);
       } finally {
