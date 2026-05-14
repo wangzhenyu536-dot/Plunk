@@ -4,7 +4,7 @@ import { getAuth } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-auth
 import { getFirestore } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyAnVk3IbSqBoA7JnbqYB5BRmzXERZNCraw",        
+  apiKey: "AIzaSyAnVk3IbSqBoA7JnbqYB5BRmzXERZNCraw",
   authDomain: "plunk-da9d9.firebaseapp.com",
   projectId: "plunk-da9d9",
   storageBucket: "plunk-da9d9.appspot.com",

@@ -344,15 +344,17 @@
         '</div>' +
         '<div class="cat-name">' + cat.label + '<span class="chevron">›</span></div>' +
         '<div class="cat-count">' + count + ' Moments</div>';
-      card.onclick = function() { showDetail(cat, data); };
+      card.onclick = function() { showDetail(cat); };
       grid.appendChild(card);
     });
   }
 
   // 显示分类详情
-  function showDetail(cat, allData) {
-    var moments = allData.filter(function(d) {
-      return d.category && d.category.toLowerCase() === cat.id;
+  function showDetail(cat) {
+    var records = window._allRecords || [];
+    var moments = records.filter(function(r) {
+      var c = (r.category || 'mood').toLowerCase();
+      return c === cat.id;
     });
     document.getElementById('detailTitle').textContent = cat.label;
     var list = document.getElementById('momentsList');
