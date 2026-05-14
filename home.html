@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Plunk</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .droplet-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.3);
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.3s ease; z-index: 99;
+    }
+    .droplet-overlay.show { opacity: 1; pointer-events: all; }
+
+    .droplet-panel {
+      position: fixed; bottom: 0;
+      left: 50%;
+      transform: translateX(-50%) translateY(100%);
+      width: 100%; max-width: 402px;
+      background: #ffffff;
+      border-radius: 24px 24px 0 0;
+      padding: 24px 20px 48px;
+      box-shadow: 0 -8px 40px rgba(0,0,0,0.12);
+      z-index: 100; min-height: 55vh;
+      display: flex; flex-direction: column;
+      transition: transform 0.4s cubic-bezier(0.32,0.72,0,1);
+    }
+    .droplet-panel.open {
+      transform: translateX(-50%) translateY(0);
+    }
+    .droplet-header {
+      display: flex; justify-content: space-between;
+      align-items: center; margin-bottom: 20px;
+    }
+    .droplet-label {
+      font-size: 11px; font-weight: 700;
+      letter-spacing: 0.2em; text-transform: uppercase;
+      color: #a8a29e; font-family: sans-serif;
+    }
+    .droplet-close {
+      width: 32px; height: 32px; border-radius: 50%;
+      border: none; background: #f5f5f4; cursor: pointer;
+      font-size: 14px; color: #78716c;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .droplet-textarea {
+      flex: 1; width: 100%; min-height: 140px;
+      background: transparent; border: none;
+      outline: none; resize: none;
+      font-size: 18px; font-family: 'Georgia', serif;
+      color: #1c1917; line-height: 1.8; padding: 0;
+    }
+    .droplet-textarea::placeholder { color: #d6d3d1; }
+    .image-preview-row {
+      display: flex; gap: 8px;
+      margin-bottom: 12px; overflow-x: auto;
+    }
+    .image-thumb {
+      position: relative; width: 72px; height: 72px;
+      border-radius: 12px; overflow: hidden; flex-shrink: 0;
+    }
+    .image-thumb img { width:100%; height:100%; object-fit:cover; }
+    .image-thumb-remove {
+      position: absolute; top: 4px; right: 4px;
+      width: 18px; height: 18px; border-radius: 50%;
+      background: rgba(0,0,0,0.5); color: white;
+      border: none; cursor: pointer; font-size: 10px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .droplet-toolbar {
+      display: flex; justify-content: space-between;
+      align-items: center; padding-top: 16px;
+      border-top: 1px solid #f0f0ee; margin-top: 12px;
+    }
+    .droplet-tools { display: flex; gap: 4px; }
+    .tool-btn {
+      width: 40px; height: 40px; border-radius: 50%;
+      border: none; background: transparent; cursor: pointer;
+      font-size: 20px; color: #a8a29e;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.2s;
+    }
+    .tool-btn:hover { background: #f5f5f4; }
+    .tool-btn.recording { color: #ef4444; background: #fef2f2; }
+    .droplet-send {
+      height: 44px; padding: 0 24px;
+      border-radius: 50px; border: none;
+      background: #44403c; color: white; cursor: pointer;
+      font-size: 16px; display: flex; align-items: center;
+      transition: background 0.2s, opacity 0.2s;
+    }
+    .droplet-send:hover { background: #292524; }
+    .droplet-send:disabled { opacity: 0.35; cursor: not-allowed; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinner {
+      width: 16px; height: 16px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: white; border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    .tree-area { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+  </style>
+</head>
+<body>
+
+  <div class="top-bar">
+    <span class="logo">✦ PLUNK</span>
+    <div class="icons">
+      <span style="cursor:pointer; color:var(--text-sub)">?</span>
+      <span style="cursor:pointer; color:var(--text-sub)">👤</span>
+    </div>
+  </div>
+
+  <div class="main-content">
+    <p class="date-text" id="dateText"></p>
+    <h1 class="main-title">How was your day?</h1>
+    <p class="sub-title">Your tree is growing quietly</p>
+  </div>
+
+  <div class="tree-area" id="treeArea">
+    <img id="treeImg" src="tree1/m.png" alt="your tree"
+         style="width:260px; height:auto; display:block; margin:0 auto;">
+  </div>
+
+  <nav class="bottom-nav">
+    <button class="nav-item" onclick="location.href='review.html'">
+      <span>△</span>FOREST
+    </button>
+    <button class="nav-item active">
+      <span>⬡</span>GARDENING
+    </button>
+    <button class="nav-item" onclick="location.href='settings.html'">
+      <span>◎</span>SETTING
+    </button>
+  </nav>
+
+  <div class="droplet-overlay" id="overlay"></div>
+
+  <div class="droplet-panel" id="dropletPanel">
+    <div class="droplet-header">
+      <span class="droplet-label" id="dropletLabel">Droplet of Consciousness</span>
+      <button class="droplet-close" id="closeBtn">✕</button>
+    </div>
+    <textarea class="droplet-textarea" id="contentInput"
+      placeholder="What's on your mind?"></textarea>
+    <div class="image-preview-row" id="imagePreviewRow"></div>
+    <div class="droplet-toolbar">
+      <div class="droplet-tools">
+        <label class="tool-btn">🖼
+          <input type="file" accept="image/*" id="imageInput" style="display:none">
+        </label>
+        <button class="tool-btn" id="micBtn">🎙</button>
+      </div>
+      <button class="droplet-send" id="sendBtn" disabled>
+        <span id="sendIcon">➤</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ① 普通script：面板开关，最先执行，不依赖任何东西 -->
+  <script>
+    var uploadedImages = [];
+    var isRecording = false;
+    var isProcessing = false;
+    var currentUser = null;
+
+    // 日期
+    document.getElementById('dateText').textContent =
+      new Date().toLocaleDateString('en-US',
+        { month:'long', day:'numeric', year:'numeric' }).toUpperCase();
+
+    // 面板开关
+    function openPanel() {
+      document.getElementById('dropletPanel').classList.add('open');
+      document.getElementById('overlay').classList.add('show');
+      setTimeout(function() {
+        document.getElementById('contentInput').focus();
+      }, 420);
+    }
+
+    function closePanel() {
+      document.getElementById('dropletPanel').classList.remove('open');
+      document.getElementById('overlay').classList.remove('show');
+    }
+
+    // 绑定点击事件
+    document.getElementById('treeArea').addEventListener('click', openPanel);
+    document.getElementById('overlay').addEventListener('click', closePanel);
+    document.getElementById('closeBtn').addEventListener('click', closePanel);
+
+    // 输入时检查发送按钮
+    document.getElementById('contentInput').addEventListener('input', function() {
+      var hasText = this.value.trim().length > 0;
+      document.getElementById('sendBtn').disabled =
+        (!hasText && uploadedImages.length === 0) || isProcessing;
+    });
+
+    // 图片上传
+    document.getElementById('imageInput').addEventListener('change', function() {
+      var file = this.files[0];
+      if (!file || uploadedImages.length >= 4) return;
+      var reader = new FileReader();
+      reader.onloadend = function() {
+        uploadedImages.push(reader.result);
+        renderPreviews();
+        var hasText = document.getElementById('contentInput').value.trim().length > 0;
+        document.getElementById('sendBtn').disabled =
+          (!hasText && uploadedImages.length === 0) || isProcessing;
+      };
+      reader.readAsDataURL(file);
+    });
+
+    function renderPreviews() {
+      var row = document.getElementById('imagePreviewRow');
+      row.innerHTML = '';
+      uploadedImages.forEach(function(src, i) {
+        var div = document.createElement('div');
+        div.className = 'image-thumb';
+        div.innerHTML = '<img src="' + src + '">' +
+          '<button class="image-thumb-remove" onclick="removeImage(' + i + ')">✕</button>';
+        row.appendChild(div);
+      });
+    }
+
+    function removeImage(i) {
+      uploadedImages.splice(i, 1);
+      renderPreviews();
+    }
+
+    // 麦克风
+    document.getElementById('micBtn').addEventListener('click', function() {
+      isRecording = !isRecording;
+      this.classList.toggle('recording', isRecording);
+      document.getElementById('dropletLabel').textContent =
+        isRecording ? 'Listening...' : 'Droplet of Consciousness';
+    });
+
+    // 发送按钮（Firebase 部分由下面的 module 填充）
+    document.getElementById('sendBtn').addEventListener('click', function() {
+      if (typeof doSend === 'function') {
+        doSend();
+      } else {
+        alert('Still loading, please try again in a moment.');
+      }
+    });
+  </script>
+
+  <!-- ② module script：只负责 Firebase，失败不影响面板 -->
+  <script type="module">
+    import { auth, db } from './firebase.js';
+    import { onAuthStateChanged }
+      from "https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js";
+    import { doc, getDoc, collection, addDoc, updateDoc, increment, serverTimestamp }
+      from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
+
+    var treeImages = {
+      seed:   'tree1/xs.png',
+      sprout: 'tree1/s.png',
+      small:  'tree1/m.png',
+      medium: 'tree1/L.png',
+      big:    'tree1/XL.png',
+    };
+
+    // 登录检查 + 显示对应的树
+    onAuthStateChanged(auth, async function(user) {
+      if (!user) { location.href = 'index.html'; return; }
+      currentUser = user;   // 写入全局变量
+      try {
+        var snap = await getDoc(doc(db, 'users', user.uid));
+        var data = snap.data();
+        var count = (data && data.record_count) || 0;
+        var stage = 'seed';
+        if      (count >= 100) stage = 'big';
+        else if (count >= 30)  stage = 'medium';
+        else if (count >= 10)  stage = 'small';
+        else if (count >= 1)   stage = 'sprout';
+        document.getElementById('treeImg').src = treeImages[stage];
+      } catch(e) { console.log('load tree error:', e.message); }
+    });
+
+    // 把存储函数暴露给普通 script
+    window.doSend = async function() {
+      var content = document.getElementById('contentInput').value.trim();
+      if (!content && uploadedImages.length === 0) {
+        alert('Please write something first.');
+        return;
+      }
+      if (!currentUser) {
+        alert('Not logged in yet, please wait a moment and try again.');
+        return;
+      }
+
+      isProcessing = true;
+      document.getElementById('sendIcon').innerHTML = '<div class="spinner"></div>';
+      document.getElementById('sendBtn').disabled = true;
+
+      try {
+        await addDoc(collection(db, 'records'), {
+          user_id: currentUser.uid,
+          content: content,
+          images: uploadedImages,
+          created_at: serverTimestamp()
+        });
+        await updateDoc(doc(db, 'users', currentUser.uid), {
+          record_count: increment(1)
+        });
+        document.getElementById('contentInput').value = '';
+        uploadedImages = [];
+        renderPreviews();
+        closePanel();
+        location.reload();
+      } catch(e) {
+        alert('Save failed: ' + e.message);
+      } finally {
+        isProcessing = false;
+        document.getElementById('sendIcon').textContent = '➤';
+        document.getElementById('sendBtn').disabled = false;
+      }
+    };
+  </script>
+
+</body>
+</html>
