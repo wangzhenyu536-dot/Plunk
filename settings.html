@@ -58,9 +58,7 @@
   </nav>
 
   <script type="module">
-    import { auth, db } from './firebase.js';
-    import { onAuthStateChanged, signOut }
-      from "https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js";
+    import { db } from './firebase.js';
     import { doc, onSnapshot }
       from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
 
@@ -84,29 +82,23 @@
       });
     }
 
-    onAuthStateChanged(auth, function(user) {
+    // 登录检查（只看 localStorage）
+    (function checkLogin() {
       clearTimeout(authTimeout);
-      if (user) {
-        subscribeUserDoc(user.uid, user.email);
-        return;
-      }
       var lsUid   = localStorage.getItem('plunk_uid');
       var lsEmail = localStorage.getItem('plunk_email');
-      if (lsUid) {
-        subscribeUserDoc(lsUid, lsEmail);
+      if (!lsUid) {
+        location.href = 'index.html';
         return;
       }
-      location.href = 'index.html';
-    });
+      subscribeUserDoc(lsUid, lsEmail);
+    })();
 
-    document.getElementById('signoutBtn').addEventListener('click', async function() {
-      try {
-        localStorage.removeItem('plunk_uid');
-        localStorage.removeItem('plunk_email');
-        localStorage.removeItem('plunk_name');
-        try { await signOut(auth); } catch(e) { /* 没登 Firebase Auth 也无所谓 */ }
-        location.href = 'index.html';
-      } catch(e) { alert('Sign out failed: ' + e.message); }
+    document.getElementById('signoutBtn').addEventListener('click', function() {
+      localStorage.removeItem('plunk_uid');
+      localStorage.removeItem('plunk_email');
+      localStorage.removeItem('plunk_name');
+      location.href = 'index.html';
     });
   </script>
 

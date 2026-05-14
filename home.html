@@ -101,6 +101,28 @@
       animation: spin 0.8s linear infinite;
     }
     .tree-area { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+
+    /* 分类选择器 */
+    .category-row {
+      display: flex; gap: 8px;
+      margin-top: 12px; margin-bottom: 4px;
+      flex-wrap: wrap;
+    }
+    .cat-chip {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 6px 12px; border-radius: 999px;
+      border: 1.5px solid #e7e5e4; background: #fafaf9;
+      font-size: 13px; color: #78716c; cursor: pointer;
+      font-family: 'DM Sans', sans-serif; font-weight: 500;
+      transition: background .15s, border-color .15s, color .15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .cat-chip .cat-emoji { font-size: 14px; line-height: 1; }
+    .cat-chip:hover { background: #f5f5f4; }
+    .cat-chip.selected[data-cat="mood"]   { background:#F87171; border-color:#F87171; color:#fff; }
+    .cat-chip.selected[data-cat="social"] { background:#60A5FA; border-color:#60A5FA; color:#fff; }
+    .cat-chip.selected[data-cat="places"] { background:#34D399; border-color:#34D399; color:#fff; }
+    .cat-chip.selected[data-cat="food"]   { background:#FB923C; border-color:#FB923C; color:#fff; }
   </style>
 </head>
 <body>
@@ -145,6 +167,20 @@
     </div>
     <textarea class="droplet-textarea" id="contentInput"
       placeholder="What's on your mind?"></textarea>
+    <div class="category-row" id="categoryRow">
+      <button type="button" class="cat-chip selected" data-cat="mood">
+        <span class="cat-emoji">🤍</span>Mood
+      </button>
+      <button type="button" class="cat-chip" data-cat="social">
+        <span class="cat-emoji">👥</span>Social
+      </button>
+      <button type="button" class="cat-chip" data-cat="places">
+        <span class="cat-emoji">📍</span>Places
+      </button>
+      <button type="button" class="cat-chip" data-cat="food">
+        <span class="cat-emoji">🍽</span>Food
+      </button>
+    </div>
     <div class="image-preview-row" id="imagePreviewRow"></div>
     <div class="droplet-toolbar">
       <div class="droplet-tools">
@@ -165,6 +201,18 @@
     var isRecording = false;
     var isProcessing = false;
     var currentUser = null;
+    var selectedCategory = 'mood';
+
+    // 分类切换
+    document.querySelectorAll('#categoryRow .cat-chip').forEach(function(chip) {
+      chip.addEventListener('click', function() {
+        document.querySelectorAll('#categoryRow .cat-chip').forEach(function(c) {
+          c.classList.remove('selected');
+        });
+        chip.classList.add('selected');
+        selectedCategory = chip.getAttribute('data-cat');
+      });
+    });
 
     // 日期
     document.getElementById('dateText').textContent =
@@ -249,9 +297,7 @@
 
   <!-- ② module script：只负责 Firebase，失败不影响面板 -->
   <script type="module">
-    import { auth, db } from './firebase.js';
-    import { onAuthStateChanged }
-      from "https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js";
+    import { db } from './firebase.js';
     import { doc, onSnapshot, collection, addDoc, updateDoc, increment, serverTimestamp }
       from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
 
@@ -330,24 +376,18 @@
       });
     }
 
-    // 登录检查 + 实时订阅树状态
-    onAuthStateChanged(auth, function(user) {
+    // 登录检查 + 实时订阅树状态(只看 localStorage,不再依赖 Firebase Auth)
+    (function checkLogin() {
       clearTimeout(authTimeout);
-      if (user) {
-        currentUser = user;
-        subscribeTreeForUid(user.uid);
-        return;
-      }
-      // 没有 Firebase Auth 登录态 → 看看 localStorage 有没有(无密码登录走这里)
       var lsUid   = localStorage.getItem('plunk_uid');
       var lsEmail = localStorage.getItem('plunk_email');
-      if (lsUid) {
-        currentUser = { uid: lsUid, email: lsEmail || '' };
-        subscribeTreeForUid(lsUid);
+      if (!lsUid) {
+        location.href = 'index.html';
         return;
       }
-      location.href = 'index.html';
-    });
+      currentUser = { uid: lsUid, email: lsEmail || '' };
+      subscribeTreeForUid(lsUid);
+    })();
 
     // 把存储函数暴露给普通 script
     window.doSend = async function() {
@@ -370,6 +410,7 @@
           user_id: currentUser.uid,
           content: content,
           images: uploadedImages,
+          category: selectedCategory,
           created_at: serverTimestamp()
         });
         await updateDoc(doc(db, 'users', currentUser.uid), {
@@ -378,6 +419,11 @@
         document.getElementById('contentInput').value = '';
         uploadedImages = [];
         renderPreviews();
+        // 重置分类回 Mood 默认
+        selectedCategory = 'mood';
+        document.querySelectorAll('#categoryRow .cat-chip').forEach(function(c) {
+          c.classList.toggle('selected', c.getAttribute('data-cat') === 'mood');
+        });
         closePanel();
       } catch(e) {
         alert('Save failed: ' + e.message);

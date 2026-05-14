@@ -204,6 +204,21 @@
     .moment-card .moment-text {
       font-family: 'Georgia', serif;
       font-size: 16px; color: #292524; line-height: 1.6;
+      white-space: pre-wrap; word-break: break-word;
+    }
+    .moment-card .moment-images {
+      display: grid; gap: 6px;
+      grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+      margin-top: 12px;
+    }
+    .moment-card .moment-images.count-1 { grid-template-columns: 1fr; }
+    .moment-card .moment-images.count-2 { grid-template-columns: 1fr 1fr; }
+    .moment-card .moment-images.count-3,
+    .moment-card .moment-images.count-4 { grid-template-columns: 1fr 1fr; }
+    .moment-card .moment-images img {
+      width: 100%; aspect-ratio: 1 / 1;
+      object-fit: cover; border-radius: 12px;
+      display: block;
     }
     .empty-state {
       text-align: center; padding: 60px 20px;
@@ -286,6 +301,12 @@
     { id: 'food',   label: 'Food',   icon: '🍽', color: '#FB923C' },
   ];
 
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, function(c) {
+      return ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[c];
+    });
+  }
+
   // 生成年轮 SVG 路径
   function makeRingPath(ringIdx, catCounts, total) {
     var radius = 40 + ringIdx * 30;
@@ -345,9 +366,20 @@
           : '';
         var card = document.createElement('div');
         card.className = 'moment-card';
-        card.innerHTML =
-          '<div class="moment-time">' + date + '</div>' +
-          '<div class="moment-text">' + (m.content || '') + '</div>';
+
+        var html = '<div class="moment-time">' + date + '</div>';
+        if (m.content) {
+          html += '<div class="moment-text">' + escapeHtml(m.content) + '</div>';
+        }
+        if (Array.isArray(m.images) && m.images.length) {
+          var imgs = m.images.slice(0, 4);
+          html += '<div class="moment-images count-' + imgs.length + '">';
+          imgs.forEach(function(src) {
+            html += '<img src="' + src + '" alt="">';
+          });
+          html += '</div>';
+        }
+        card.innerHTML = html;
         list.appendChild(card);
       });
     }
@@ -363,25 +395,19 @@
 
 <!-- Firebase：读取数据并渲染 -->
 <script type="module">
-  import { auth, db } from './firebase.js';
-  import { onAuthStateChanged }
-    from "https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js";
+  import { db } from './firebase.js';
   import { collection, query, where, getDocs }
     from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
 
-  onAuthStateChanged(auth, async function(user) {
-    if (!user) { location.href = 'index.html'; return; }
-
-    // 读取所有记录
+  async function loadRecordsForUid(uid) {
     var q = query(
       collection(db, 'records'),
-      where('user_id', '==', user.uid)
+      where('user_id', '==', uid)
     );
     var snapshot = await getDocs(q);
     var records = [];
     snapshot.forEach(function(doc) { records.push(doc.data()); });
 
-    // 统计每个分类的数量
     var catMap = {};
     records.forEach(function(r) {
       var cat = (r.category || 'mood').toLowerCase();
@@ -392,10 +418,8 @@
     });
     var total = records.length;
 
-    // 更新中心数字
     document.getElementById('totalCount').textContent = total;
 
-    // 画年轮
     var countArr = categories.map(function(c) {
       var found = catCounts.find(function(d) { return d.category === c.id; });
       return found ? found.count : 1;
@@ -405,12 +429,19 @@
       if (el) el.setAttribute('d', makeRingPath(i, countArr, total));
     }
 
-    // 渲染卡片
     renderCategories(catCounts, total);
-
-    // 把 records 存到全局供详情页用
     window._allRecords = records;
-  });
+  }
+
+  // 登录检查（只看 localStorage）
+  (function checkLogin() {
+    var lsUid = localStorage.getItem('plunk_uid');
+    if (!lsUid) {
+      location.href = 'index.html';
+      return;
+    }
+    loadRecordsForUid(lsUid);
+  })();
 </script>
 
 </body>
