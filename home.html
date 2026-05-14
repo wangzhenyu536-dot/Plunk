@@ -120,8 +120,8 @@
   </div>
 
   <div class="tree-area" id="treeArea">
-    <img id="treeImg" src="tree1/m.png" alt="your tree"
-         style="width:260px; height:auto; display:block; margin:0 auto;">
+    <div id="treeImg" aria-label="your tree"
+         style="width:260px; height:260px; display:flex; align-items:center; justify-content:center; margin:0 auto;"></div>
   </div>
 
   <nav class="bottom-nav">
@@ -255,16 +255,67 @@
     import { doc, getDoc, collection, addDoc, updateDoc, increment, serverTimestamp }
       from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
 
-    var treeImages = {
-      seed:   'tree1/xs.png',
-      sprout: 'tree1/s.png',
-      small:  'tree1/m.png',
-      medium: 'tree1/L.png',
-      big:    'tree1/XL.png',
+    var treeSvgs = {
+      seed:   '<svg viewBox="0 0 120 120" width="120" height="120" xmlns="http://www.w3.org/2000/svg">'
+            + '<ellipse cx="60" cy="100" rx="34" ry="6" fill="#d6cfa7" opacity=".5"/>'
+            + '<ellipse cx="60" cy="92" rx="14" ry="9" fill="#7a5a35"/>'
+            + '<path d="M60 88 Q63 80 60 74 Q57 80 60 88" fill="#4a6741"/>'
+            + '</svg>',
+      sprout: '<svg viewBox="0 0 160 180" width="160" height="180" xmlns="http://www.w3.org/2000/svg">'
+            + '<ellipse cx="80" cy="160" rx="46" ry="7" fill="#d6cfa7" opacity=".5"/>'
+            + '<path d="M80 160 L80 110" stroke="#6b4f2c" stroke-width="3" stroke-linecap="round"/>'
+            + '<path d="M80 130 Q60 118 56 100 Q72 110 80 128 Z" fill="#5d7a3a"/>'
+            + '<path d="M80 122 Q100 108 104 88 Q88 100 80 120 Z" fill="#4a6741"/>'
+            + '</svg>',
+      small:  '<svg viewBox="0 0 200 220" width="200" height="220" xmlns="http://www.w3.org/2000/svg">'
+            + '<ellipse cx="100" cy="200" rx="60" ry="8" fill="#d6cfa7" opacity=".5"/>'
+            + '<path d="M100 200 L100 130" stroke="#6b4f2c" stroke-width="6" stroke-linecap="round"/>'
+            + '<circle cx="100" cy="110" r="44" fill="#5d7a3a"/>'
+            + '<circle cx="78"  cy="118" r="32" fill="#6b8a44"/>'
+            + '<circle cx="124" cy="118" r="32" fill="#4a6741"/>'
+            + '</svg>',
+      medium: '<svg viewBox="0 0 240 260" width="240" height="260" xmlns="http://www.w3.org/2000/svg">'
+            + '<ellipse cx="120" cy="240" rx="78" ry="9" fill="#d6cfa7" opacity=".5"/>'
+            + '<path d="M120 240 L120 150" stroke="#6b4f2c" stroke-width="9" stroke-linecap="round"/>'
+            + '<path d="M120 158 L108 198 M120 178 L134 208" stroke="#6b4f2c" stroke-width="4" stroke-linecap="round"/>'
+            + '<circle cx="120" cy="120" r="62" fill="#5d7a3a"/>'
+            + '<circle cx="86"  cy="132" r="44" fill="#6b8a44"/>'
+            + '<circle cx="156" cy="130" r="46" fill="#4a6741"/>'
+            + '<circle cx="120" cy="86"  r="38" fill="#7a9a55"/>'
+            + '</svg>',
+      big:    '<svg viewBox="0 0 280 300" width="260" height="280" xmlns="http://www.w3.org/2000/svg">'
+            + '<ellipse cx="140" cy="280" rx="96" ry="10" fill="#d6cfa7" opacity=".5"/>'
+            + '<path d="M140 280 L140 170" stroke="#6b4f2c" stroke-width="12" stroke-linecap="round"/>'
+            + '<path d="M140 180 L118 230 M140 200 L162 240 M140 220 L120 260" stroke="#6b4f2c" stroke-width="5" stroke-linecap="round"/>'
+            + '<circle cx="140" cy="130" r="78" fill="#4a6741"/>'
+            + '<circle cx="92"  cy="148" r="58" fill="#5d7a3a"/>'
+            + '<circle cx="190" cy="146" r="60" fill="#3e5934"/>'
+            + '<circle cx="140" cy="78"  r="48" fill="#6b8a44"/>'
+            + '<circle cx="100" cy="92"  r="34" fill="#7a9a55"/>'
+            + '<circle cx="184" cy="92"  r="34" fill="#5d7a3a"/>'
+            + '</svg>'
     };
+
+    function renderTree(stage) {
+      document.getElementById('treeImg').innerHTML = treeSvgs[stage] || treeSvgs.seed;
+    }
+
+    // 网络断开时也先把树画出来，避免空白
+    renderTree('seed');
+
+    // 5s 兜底：如果 Firebase 一直没回包（中国大陆常见网络问题），给个提示
+    var authTimeout = setTimeout(function() {
+      var bar = document.createElement('div');
+      bar.style.cssText = 'position:fixed; top:0; left:0; right:0; padding:10px 16px;'
+        + 'background:#fff8e1; color:#8a5a00; font-size:13px; text-align:center;'
+        + 'border-bottom:1px solid #f0d68a; z-index:300;';
+      bar.textContent = '⚠ Network is slow or Firebase is unreachable. Page is in offline preview mode.';
+      document.body.appendChild(bar);
+    }, 5000);
 
     // 登录检查 + 显示对应的树
     onAuthStateChanged(auth, async function(user) {
+      clearTimeout(authTimeout);
       if (!user) { location.href = 'index.html'; return; }
       currentUser = user;   // 写入全局变量
       try {
@@ -276,7 +327,7 @@
         else if (count >= 30)  stage = 'medium';
         else if (count >= 10)  stage = 'small';
         else if (count >= 1)   stage = 'sprout';
-        document.getElementById('treeImg').src = treeImages[stage];
+        renderTree(stage);
       } catch(e) { console.log('load tree error:', e.message); }
     });
 
