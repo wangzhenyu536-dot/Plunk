@@ -101,6 +101,18 @@
       animation: spin 0.8s linear infinite;
     }
     .tree-area { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+    /* 树的 8 阶段交叉淡入动画 */
+    #treeImg { position: relative; }
+    .tree-layer {
+      position: absolute; inset: 0;
+      width: 100%; height: 100%;
+      object-fit: contain;
+      opacity: 0;
+      transform: scale(.92) translateY(6px);
+      transition: opacity .8s ease, transform .8s ease;
+      pointer-events: none;
+    }
+    .tree-layer.show { opacity: 1; transform: scale(1) translateY(0); }
 
     /* 分类选择器 */
     .category-row {
@@ -143,7 +155,10 @@
 
   <div class="tree-area" id="treeArea">
     <div id="treeImg" aria-label="your tree"
-         style="width:260px; height:260px; display:flex; align-items:center; justify-content:center; margin:0 auto;"></div>
+         style="width:260px; height:260px; margin:0 auto;">
+      <img class="tree-layer" alt="" />
+      <img class="tree-layer" alt="" />
+    </div>
   </div>
 
   <nav class="bottom-nav">
@@ -297,57 +312,40 @@
 
   <!-- ② module script：只负责 Firebase，失败不影响面板 -->
   <script type="module">
-    import { db } from './firebase.js';
-    import { doc, onSnapshot, collection, addDoc, updateDoc, increment, serverTimestamp }
+    import { db, auth } from './firebase.js';
+    import { doc, onSnapshot, collection, addDoc, setDoc, increment, serverTimestamp }
       from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
+    import { onAuthStateChanged, signInAnonymously }
+      from "https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js";
 
-    var treeSvgs = {
-      seed:   '<svg viewBox="0 0 120 120" width="120" height="120" xmlns="http://www.w3.org/2000/svg">'
-            + '<ellipse cx="60" cy="100" rx="34" ry="6" fill="#d6cfa7" opacity=".5"/>'
-            + '<ellipse cx="60" cy="92" rx="14" ry="9" fill="#7a5a35"/>'
-            + '<path d="M60 88 Q63 80 60 74 Q57 80 60 88" fill="#4a6741"/>'
-            + '</svg>',
-      sprout: '<svg viewBox="0 0 160 180" width="160" height="180" xmlns="http://www.w3.org/2000/svg">'
-            + '<ellipse cx="80" cy="160" rx="46" ry="7" fill="#d6cfa7" opacity=".5"/>'
-            + '<path d="M80 160 L80 110" stroke="#6b4f2c" stroke-width="3" stroke-linecap="round"/>'
-            + '<path d="M80 130 Q60 118 56 100 Q72 110 80 128 Z" fill="#5d7a3a"/>'
-            + '<path d="M80 122 Q100 108 104 88 Q88 100 80 120 Z" fill="#4a6741"/>'
-            + '</svg>',
-      small:  '<svg viewBox="0 0 200 220" width="200" height="220" xmlns="http://www.w3.org/2000/svg">'
-            + '<ellipse cx="100" cy="200" rx="60" ry="8" fill="#d6cfa7" opacity=".5"/>'
-            + '<path d="M100 200 L100 130" stroke="#6b4f2c" stroke-width="6" stroke-linecap="round"/>'
-            + '<circle cx="100" cy="110" r="44" fill="#5d7a3a"/>'
-            + '<circle cx="78"  cy="118" r="32" fill="#6b8a44"/>'
-            + '<circle cx="124" cy="118" r="32" fill="#4a6741"/>'
-            + '</svg>',
-      medium: '<svg viewBox="0 0 240 260" width="240" height="260" xmlns="http://www.w3.org/2000/svg">'
-            + '<ellipse cx="120" cy="240" rx="78" ry="9" fill="#d6cfa7" opacity=".5"/>'
-            + '<path d="M120 240 L120 150" stroke="#6b4f2c" stroke-width="9" stroke-linecap="round"/>'
-            + '<path d="M120 158 L108 198 M120 178 L134 208" stroke="#6b4f2c" stroke-width="4" stroke-linecap="round"/>'
-            + '<circle cx="120" cy="120" r="62" fill="#5d7a3a"/>'
-            + '<circle cx="86"  cy="132" r="44" fill="#6b8a44"/>'
-            + '<circle cx="156" cy="130" r="46" fill="#4a6741"/>'
-            + '<circle cx="120" cy="86"  r="38" fill="#7a9a55"/>'
-            + '</svg>',
-      big:    '<svg viewBox="0 0 280 300" width="260" height="280" xmlns="http://www.w3.org/2000/svg">'
-            + '<ellipse cx="140" cy="280" rx="96" ry="10" fill="#d6cfa7" opacity=".5"/>'
-            + '<path d="M140 280 L140 170" stroke="#6b4f2c" stroke-width="12" stroke-linecap="round"/>'
-            + '<path d="M140 180 L118 230 M140 200 L162 240 M140 220 L120 260" stroke="#6b4f2c" stroke-width="5" stroke-linecap="round"/>'
-            + '<circle cx="140" cy="130" r="78" fill="#4a6741"/>'
-            + '<circle cx="92"  cy="148" r="58" fill="#5d7a3a"/>'
-            + '<circle cx="190" cy="146" r="60" fill="#3e5934"/>'
-            + '<circle cx="140" cy="78"  r="48" fill="#6b8a44"/>'
-            + '<circle cx="100" cy="92"  r="34" fill="#7a9a55"/>'
-            + '<circle cx="184" cy="92"  r="34" fill="#5d7a3a"/>'
-            + '</svg>'
-    };
+    // 树的 8 个生长阶段，对应 animAsset/1.svg … 8.svg（按文件引用，避免内联 ~5MB base64）
+    var TREE_STAGE_COUNT = 8;
+
+    // 预加载 8 张图，保证阶段切换时不出现白屏闪烁
+    for (var i = 1; i <= TREE_STAGE_COUNT; i++) {
+      var pre = new Image();
+      pre.src = 'animAsset/' + i + '.svg';
+    }
+
+    // 双层交叉淡入：两个 <img> 图层轮流作为「进场」层
+    var treeLayers = document.querySelectorAll('#treeImg .tree-layer');
+    var activeLayer = -1;     // 当前正在显示的图层索引（-1 = 尚未渲染）
+    var currentStage = 0;     // 当前已显示的阶段（0 = 尚未渲染）
 
     function renderTree(stage) {
-      document.getElementById('treeImg').innerHTML = treeSvgs[stage] || treeSvgs.seed;
+      stage = Math.max(1, Math.min(TREE_STAGE_COUNT, stage | 0));
+      if (stage === currentStage) return;   // 阶段未变化则不重播动画（onSnapshot 可能重复触发）
+      currentStage = stage;
+      var nextIndex = activeLayer === 0 ? 1 : 0;   // 轮流使用两个图层
+      var incoming = treeLayers[nextIndex];
+      incoming.src = 'animAsset/' + stage + '.svg';
+      incoming.classList.add('show');       // 进场层淡入 + 轻微放大上浮 = 生长感
+      if (activeLayer >= 0) treeLayers[activeLayer].classList.remove('show');
+      activeLayer = nextIndex;
     }
 
     // 网络断开时也先把树画出来，避免空白
-    renderTree('seed');
+    renderTree(1);
 
     // 5s 兜底：如果 Firebase 一直没回包（中国大陆常见网络问题），给个提示
     var authTimeout = setTimeout(function() {
@@ -365,29 +363,43 @@
       unsubUser = onSnapshot(doc(db, 'users', uid), function(snap) {
         var data = snap.data();
         var count = (data && data.record_count) || 0;
-        var stage = 'seed';
-        if      (count >= 100) stage = 'big';
-        else if (count >= 30)  stage = 'medium';
-        else if (count >= 10)  stage = 'small';
-        else if (count >= 1)   stage = 'sprout';
+        // 每 5 条日志进一阶，共 8 阶段
+        var stage = 1;
+        if      (count >= 35) stage = 8;
+        else if (count >= 30) stage = 7;
+        else if (count >= 25) stage = 6;
+        else if (count >= 20) stage = 5;
+        else if (count >= 15) stage = 4;
+        else if (count >= 10) stage = 3;
+        else if (count >= 5)  stage = 2;
         renderTree(stage);
       }, function(err) {
         console.log('tree snapshot error:', err.message);
       });
     }
 
-    // 登录检查 + 实时订阅树状态(只看 localStorage,不再依赖 Firebase Auth)
-    (function checkLogin() {
+    // 取消账号 UI：改用 Firebase 匿名登录。同设备会复用同一个匿名 uid → 自动读到之前的数据。
+    // 原 localStorage 版登录检查（保留备查）：
+    // (function checkLogin() {
+    //   var lsUid = localStorage.getItem('plunk_uid');
+    //   if (!lsUid) { location.href = 'index.html'; return; }
+    //   currentUser = { uid: lsUid, email: localStorage.getItem('plunk_email') || '' };
+    //   subscribeTreeForUid(lsUid);
+    // })();
+    function startWithUid(uid) {
       clearTimeout(authTimeout);
-      var lsUid   = localStorage.getItem('plunk_uid');
-      var lsEmail = localStorage.getItem('plunk_email');
-      if (!lsUid) {
-        location.href = 'index.html';
-        return;
+      currentUser = { uid: uid, email: '' };
+      subscribeTreeForUid(uid);
+    }
+    onAuthStateChanged(auth, function(user) {
+      if (user) {
+        startWithUid(user.uid);
+      } else {
+        signInAnonymously(auth).catch(function(e) {
+          console.log('anon sign-in failed:', e.message);
+        });
       }
-      currentUser = { uid: lsUid, email: lsEmail || '' };
-      subscribeTreeForUid(lsUid);
-    })();
+    });
 
     // 把存储函数暴露给普通 script
     window.doSend = async function() {
@@ -413,9 +425,10 @@
           category: selectedCategory,
           created_at: serverTimestamp()
         });
-        await updateDoc(doc(db, 'users', currentUser.uid), {
+        // 匿名新用户没有预先创建的 users 文档，用 setDoc + merge 创建或累加
+        await setDoc(doc(db, 'users', currentUser.uid), {
           record_count: increment(1)
-        });
+        }, { merge: true });
         document.getElementById('contentInput').value = '';
         uploadedImages = [];
         renderPreviews();

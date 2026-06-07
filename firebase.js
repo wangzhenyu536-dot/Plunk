@@ -1,7 +1,8 @@
 // firebase.js — 复制你自己的配置，别用这个！
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js";
 import { getAuth } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js";
-import { getFirestore } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
+import { initializeFirestore, persistentLocalCache }
+  from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyAnVk3IbSqBoA7JnbqYB5BRmzXERZNCraw",
@@ -14,4 +15,5 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
-export const db = getFirestore(app);
+// 开启 Firestore 本地持久缓存：同设备读取走本地、瞬出，网络抖动时也能离线读写并排队同步
+export const db = initializeFirestore(app, { localCache: persistentLocalCache() });
