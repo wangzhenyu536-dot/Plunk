@@ -103,16 +103,17 @@
     .tree-area { cursor: pointer; -webkit-tap-highlight-color: transparent; }
     /* 树的 8 阶段交叉淡入动画 */
     #treeImg { position: relative; }
-    .tree-layer {
+    /* 用 #treeImg 前缀提升优先级，压过 style.css 里的 .tree-area img { transition: transform 0.2s } */
+    #treeImg .tree-layer {
       position: absolute; inset: 0;
       width: 100%; height: 100%;
       object-fit: contain;
       opacity: 0;
       transform: scale(.92) translateY(6px);
-      transition: opacity .8s ease, transform .8s ease;
+      transition: opacity 10s ease, transform 10s ease;
       pointer-events: none;
     }
-    .tree-layer.show { opacity: 1; transform: scale(1) translateY(0); }
+    #treeImg .tree-layer.show { opacity: 1; transform: scale(1) translateY(0); }
 
     /* 分类选择器 */
     .category-row {
@@ -338,9 +339,14 @@
       currentStage = stage;
       var nextIndex = activeLayer === 0 ? 1 : 0;   // 轮流使用两个图层
       var incoming = treeLayers[nextIndex];
+      var prev = activeLayer >= 0 ? treeLayers[activeLayer] : null;
+      incoming.classList.remove('show');    // 先回到隐藏态（opacity:0），作为过渡起点
       incoming.src = 'animAsset/' + stage + '.svg';
-      incoming.classList.add('show');       // 进场层淡入 + 轻微放大上浮 = 生长感
-      if (activeLayer >= 0) treeLayers[activeLayer].classList.remove('show');
+      void incoming.offsetWidth;            // 强制重排，让浏览器记录到 opacity:0 起始态，确保 10s 过渡每次都触发（含首屏）
+      requestAnimationFrame(function() {
+        incoming.classList.add('show');     // 进场层淡入 + 轻微放大上浮 = 生长感
+        if (prev) prev.classList.remove('show');
+      });
       activeLayer = nextIndex;
     }
 
