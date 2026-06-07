@@ -130,6 +130,9 @@ body {
   padding-bottom: 2px;
 }
 
+.nav-icon { width: 22px; height: 22px; object-fit: contain; }
+.nav-item:not(.active) .nav-icon { opacity: .55; }
+
 /* ===== 记录面板（从底部弹出）===== */
 /* ===== Droplet 输入面板 ===== */
 .droplet-panel {

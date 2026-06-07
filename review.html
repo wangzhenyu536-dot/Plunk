@@ -122,6 +122,7 @@
       font-size: 18px;
       border: 1px solid rgba(0,0,0,0.04);
     }
+    .cat-icon-img { width: 24px; height: 24px; object-fit: contain; }
     .cat-name {
       font-family: 'Georgia', serif;
       font-size: 18px;
@@ -175,6 +176,8 @@
       font-family: sans-serif; padding: 0 20px;
     }
     .nav-item.active { color: #3B3A2F; border-bottom: 1.5px solid #3B3A2F; padding-bottom: 2px; }
+    .nav-icon { width: 22px; height: 22px; object-fit: contain; }
+    .nav-item:not(.active) .nav-icon { opacity: .55; }
 
     /* 分类详情视图 */
     .detail-view { display: none; }
@@ -282,23 +285,23 @@
 <!-- 底部导航 -->
 <nav class="bottom-nav">
   <button class="nav-item active">
-    <span>△</span>FOREST
+    <img class="nav-icon" src="iconAsset/place%201.svg" alt="">FOREST
   </button>
   <button class="nav-item" onclick="location.href='home.html'">
-    <span>⬡</span>GARDENING
+    <img class="nav-icon" src="iconAsset/My%20tree.svg" alt="">GARDENING
   </button>
   <button class="nav-item" onclick="location.href='settings.html'">
-    <span>◎</span>SETTING
+    <img class="nav-icon" src="iconAsset/Setting%20.svg" alt="">SETTING
   </button>
 </nav>
 
 <script>
   // 分类配置
   var categories = [
-    { id: 'mood',   label: 'Mood',   icon: '🤍', color: '#F87171' },
-    { id: 'social', label: 'Social', icon: '👥', color: '#60A5FA' },
-    { id: 'places', label: 'Places', icon: '📍', color: '#34D399' },
-    { id: 'food',   label: 'Food',   icon: '🍽', color: '#FB923C' },
+    { id: 'mood',   label: 'Mood',   img: 'iconAsset/mood%201.svg',   color: '#F87171' },
+    { id: 'social', label: 'Social', img: 'iconAsset/social%201.svg', color: '#60A5FA' },
+    { id: 'places', label: 'Places', img: 'iconAsset/place%201.svg',  color: '#34D399' },
+    { id: 'food',   label: 'Food',   img: 'iconAsset/food%201.svg',   color: '#FB923C' },
   ];
 
   function escapeHtml(s) {
@@ -340,7 +343,7 @@
       card.className = 'cat-card';
       card.innerHTML =
         '<div class="cat-icon-wrap" style="background:' + cat.color + '18; color:' + cat.color + '">' +
-          cat.icon +
+          '<img class="cat-icon-img" src="' + cat.img + '" alt="">' +
         '</div>' +
         '<div class="cat-name">' + cat.label + '<span class="chevron">›</span></div>' +
         '<div class="cat-count">' + count + ' Moments</div>';

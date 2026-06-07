@@ -130,7 +130,7 @@
       transition: background .15s, border-color .15s, color .15s;
       -webkit-tap-highlight-color: transparent;
     }
-    .cat-chip .cat-emoji { font-size: 14px; line-height: 1; }
+    .cat-chip .cat-emoji { width: 14px; height: 14px; object-fit: contain; vertical-align: middle; }
     .cat-chip:hover { background: #f5f5f4; }
     .cat-chip.selected[data-cat="mood"]   { background:#F87171; border-color:#F87171; color:#fff; }
     .cat-chip.selected[data-cat="social"] { background:#60A5FA; border-color:#60A5FA; color:#fff; }
@@ -164,13 +164,13 @@
 
   <nav class="bottom-nav">
     <button class="nav-item" onclick="location.href='review.html'">
-      <span>△</span>FOREST
+      <img class="nav-icon" width="22" height="22" src="iconAsset/place%201.svg" alt="">FOREST
     </button>
     <button class="nav-item active">
-      <span>⬡</span>GARDENING
+      <img class="nav-icon" width="22" height="22" src="iconAsset/My%20tree.svg" alt="">GARDENING
     </button>
     <button class="nav-item" onclick="location.href='settings.html'">
-      <span>◎</span>SETTING
+      <img class="nav-icon" width="22" height="22" src="iconAsset/Setting%20.svg" alt="">SETTING
     </button>
   </nav>
 
@@ -185,16 +185,16 @@
       placeholder="What's on your mind?"></textarea>
     <div class="category-row" id="categoryRow">
       <button type="button" class="cat-chip selected" data-cat="mood">
-        <span class="cat-emoji">🤍</span>Mood
+        <img class="cat-emoji" src="iconAsset/mood%201.svg" alt="">Mood
       </button>
       <button type="button" class="cat-chip" data-cat="social">
-        <span class="cat-emoji">👥</span>Social
+        <img class="cat-emoji" src="iconAsset/social%201.svg" alt="">Social
       </button>
       <button type="button" class="cat-chip" data-cat="places">
-        <span class="cat-emoji">📍</span>Places
+        <img class="cat-emoji" src="iconAsset/place%201.svg" alt="">Places
       </button>
       <button type="button" class="cat-chip" data-cat="food">
-        <span class="cat-emoji">🍽</span>Food
+        <img class="cat-emoji" src="iconAsset/food%201.svg" alt="">Food
       </button>
     </div>
     <div class="image-preview-row" id="imagePreviewRow"></div>
