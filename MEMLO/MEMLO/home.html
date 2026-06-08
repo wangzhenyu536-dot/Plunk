@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Plunk</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .droplet-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.3);
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.3s ease; z-index: 99;
+    }
+    .droplet-overlay.show { opacity: 1; pointer-events: all; }
+
+    .droplet-panel {
+      position: fixed; bottom: 0;
+      left: 50%;
+      transform: translateX(-50%) translateY(100%);
+      width: 100%; max-width: 402px;
+      background: #ffffff;
+      border-radius: 24px 24px 0 0;
+      padding: 24px 20px 48px;
+      box-shadow: 0 -8px 40px rgba(0,0,0,0.12);
+      z-index: 100; min-height: 55vh;
+      display: flex; flex-direction: column;
+      transition: transform 0.4s cubic-bezier(0.32,0.72,0,1);
+    }
+    .droplet-panel.open {
+      transform: translateX(-50%) translateY(0);
+    }
+    .droplet-header {
+      display: flex; justify-content: space-between;
+      align-items: center; margin-bottom: 20px;
+    }
+    .droplet-label {
+      font-size: 11px; font-weight: 700;
+      letter-spacing: 0.2em; text-transform: uppercase;
+      color: #a8a29e; font-family: sans-serif;
+    }
+    .droplet-close {
+      width: 32px; height: 32px; border-radius: 50%;
+      border: none; background: #f5f5f4; cursor: pointer;
+      font-size: 14px; color: #78716c;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .droplet-textarea {
+      flex: 1; width: 100%; min-height: 140px;
+      background: transparent; border: none;
+      outline: none; resize: none;
+      font-size: 18px; font-family: 'Georgia', serif;
+      color: #1c1917; line-height: 1.8; padding: 0;
+    }
+    .droplet-textarea::placeholder { color: #d6d3d1; }
+    .image-preview-row {
+      display: flex; gap: 8px;
+      margin-bottom: 12px; overflow-x: auto;
+    }
+    .image-thumb {
+      position: relative; width: 72px; height: 72px;
+      border-radius: 12px; overflow: hidden; flex-shrink: 0;
+    }
+    .image-thumb img { width:100%; height:100%; object-fit:cover; }
+    .image-thumb-remove {
+      position: absolute; top: 4px; right: 4px;
+      width: 18px; height: 18px; border-radius: 50%;
+      background: rgba(0,0,0,0.5); color: white;
+      border: none; cursor: pointer; font-size: 10px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .droplet-toolbar {
+      display: flex; justify-content: space-between;
+      align-items: center; padding-top: 16px;
+      border-top: 1px solid #f0f0ee; margin-top: 12px;
+    }
+    .droplet-tools { display: flex; gap: 4px; }
+    .tool-btn {
+      width: 40px; height: 40px; border-radius: 50%;
+      border: none; background: transparent; cursor: pointer;
+      font-size: 20px; color: #a8a29e;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.2s;
+    }
+    .tool-btn:hover { background: #f5f5f4; }
+    .tool-btn.recording { color: #ef4444; background: #fef2f2; }
+    .droplet-send {
+      height: 44px; padding: 0 24px;
+      border-radius: 50px; border: none;
+      background: #44403c; color: white; cursor: pointer;
+      font-size: 16px; display: flex; align-items: center;
+      transition: background 0.2s, opacity 0.2s;
+    }
+    .droplet-send:hover { background: #292524; }
+    .droplet-send:disabled { opacity: 0.35; cursor: not-allowed; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinner {
+      width: 16px; height: 16px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: white; border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    .tree-area { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+    /* 树的 8 阶段交叉淡入动画 */
+    #treeImg { position: relative; }
+    /* 用 #treeImg 前缀提升优先级，压过 style.css 里的 .tree-area img { transition: transform 0.2s } */
+    #treeImg .tree-layer {
+      position: absolute; inset: 0;
+      width: 100%; height: 100%;
+      object-fit: contain;
+      opacity: 0;
+      transform: scale(.92) translateY(6px);
+      transition: opacity 10s ease, transform 10s ease;
+      pointer-events: none;
+    }
+    #treeImg .tree-layer.show { opacity: 1; transform: scale(1) translateY(0); }
+
+    /* 分类选择器 */
+    .category-row {
+      display: flex; gap: 8px;
+      margin-top: 12px; margin-bottom: 4px;
+      flex-wrap: wrap;
+    }
+    .cat-chip {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 6px 12px; border-radius: 999px;
+      border: 1.5px solid #e7e5e4; background: #fafaf9;
+      font-size: 13px; color: #78716c; cursor: pointer;
+      font-family: 'DM Sans', sans-serif; font-weight: 500;
+      transition: background .15s, border-color .15s, color .15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .cat-chip .cat-emoji { width: 14px; height: 14px; object-fit: contain; vertical-align: middle; }
+    .cat-chip:hover { background: #f5f5f4; }
+    .cat-chip.selected[data-cat="mood"]   { background:#F87171; border-color:#F87171; color:#fff; }
+    .cat-chip.selected[data-cat="social"] { background:#60A5FA; border-color:#60A5FA; color:#fff; }
+    .cat-chip.selected[data-cat="places"] { background:#34D399; border-color:#34D399; color:#fff; }
+    .cat-chip.selected[data-cat="food"]   { background:#FB923C; border-color:#FB923C; color:#fff; }
+  </style>
+</head>
+<body>
+
+  <div class="top-bar">
+    <span class="logo">✦ MEMLO</span>
+    <div class="icons">
+      <span style="cursor:pointer; color:var(--text-sub)">?</span>
+      <span style="cursor:pointer; color:var(--text-sub)">👤</span>
+    </div>
+  </div>
+
+  <div class="main-content">
+    <p class="date-text" id="dateText"></p>
+    <h1 class="main-title">How was your day?</h1>
+    <p class="sub-title">Your tree is growing quietly</p>
+  </div>
+
+  <div class="tree-area" id="treeArea">
+    <div id="treeImg" aria-label="your tree"
+         style="width:260px; height:260px; margin:0 auto;">
+      <img class="tree-layer" alt="" />
+      <img class="tree-layer" alt="" />
+    </div>
+  </div>
+
+  <nav class="bottom-nav">
+    <button class="nav-item" onclick="location.href='review.html'">
+      <img class="nav-icon" width="22" height="22" src="iconAsset/place%201.svg" alt="">FOREST
+    </button>
+    <button class="nav-item active">
+      <img class="nav-icon" width="22" height="22" src="iconAsset/My%20tree.svg" alt="">GARDENING
+    </button>
+    <button class="nav-item" onclick="location.href='settings.html'">
+      <img class="nav-icon" width="22" height="22" src="iconAsset/Setting%20.svg" alt="">SETTING
+    </button>
+  </nav>
+
+  <div class="droplet-overlay" id="overlay"></div>
+
+  <div class="droplet-panel" id="dropletPanel">
+    <div class="droplet-header">
+      <span class="droplet-label" id="dropletLabel">Droplet of Consciousness</span>
+      <button class="droplet-close" id="closeBtn">✕</button>
+    </div>
+    <textarea class="droplet-textarea" id="contentInput"
+      placeholder="What's on your mind?"></textarea>
+    <div class="category-row" id="categoryRow">
+      <button type="button" class="cat-chip selected" data-cat="mood">
+        <img class="cat-emoji" src="iconAsset/mood%201.svg" alt="">Mood
+      </button>
+      <button type="button" class="cat-chip" data-cat="social">
+        <img class="cat-emoji" src="iconAsset/social%201.svg" alt="">Social
+      </button>
+      <button type="button" class="cat-chip" data-cat="places">
+        <img class="cat-emoji" src="iconAsset/place%201.svg" alt="">Places
+      </button>
+      <button type="button" class="cat-chip" data-cat="food">
+        <img class="cat-emoji" src="iconAsset/food%201.svg" alt="">Food
+      </button>
+    </div>
+    <div class="image-preview-row" id="imagePreviewRow"></div>
+    <div class="droplet-toolbar">
+      <div class="droplet-tools">
+        <label class="tool-btn">🖼
+          <input type="file" accept="image/*" id="imageInput" style="display:none">
+        </label>
+        <button class="tool-btn" id="micBtn">🎙</button>
+      </div>
+      <button class="droplet-send" id="sendBtn" disabled>
+        <span id="sendIcon">➤</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ① 普通script：面板开关，最先执行，不依赖任何东西 -->
+  <script>
+    var uploadedImages = [];
+    var isRecording = false;
+    var isProcessing = false;
+    var currentUser = null;
+    var selectedCategory = 'mood';
+
+    // 分类切换
+    document.querySelectorAll('#categoryRow .cat-chip').forEach(function(chip) {
+      chip.addEventListener('click', function() {
+        document.querySelectorAll('#categoryRow .cat-chip').forEach(function(c) {
+          c.classList.remove('selected');
+        });
+        chip.classList.add('selected');
+        selectedCategory = chip.getAttribute('data-cat');
+      });
+    });
+
+    // 日期
+    document.getElementById('dateText').textContent =
+      new Date().toLocaleDateString('en-US',
+        { month:'long', day:'numeric', year:'numeric' }).toUpperCase();
+
+    // 面板开关
+    function openPanel() {
+      document.getElementById('dropletPanel').classList.add('open');
+      document.getElementById('overlay').classList.add('show');
+      setTimeout(function() {
+        document.getElementById('contentInput').focus();
+      }, 420);
+    }
+
+    function closePanel() {
+      document.getElementById('dropletPanel').classList.remove('open');
+      document.getElementById('overlay').classList.remove('show');
+    }
+
+    // 绑定点击事件
+    document.getElementById('treeArea').addEventListener('click', openPanel);
+    document.getElementById('overlay').addEventListener('click', closePanel);
+    document.getElementById('closeBtn').addEventListener('click', closePanel);
+
+    // 输入时检查发送按钮
+    document.getElementById('contentInput').addEventListener('input', function() {
+      var hasText = this.value.trim().length > 0;
+      document.getElementById('sendBtn').disabled =
+        (!hasText && uploadedImages.length === 0) || isProcessing;
+    });
+
+    // 图片上传
+    document.getElementById('imageInput').addEventListener('change', function() {
+      var file = this.files[0];
+      if (!file || uploadedImages.length >= 4) return;
+      var reader = new FileReader();
+      reader.onloadend = function() {
+        uploadedImages.push(reader.result);
+        renderPreviews();
+        var hasText = document.getElementById('contentInput').value.trim().length > 0;
+        document.getElementById('sendBtn').disabled =
+          (!hasText && uploadedImages.length === 0) || isProcessing;
+      };
+      reader.readAsDataURL(file);
+    });
+
+    function renderPreviews() {
+      var row = document.getElementById('imagePreviewRow');
+      row.innerHTML = '';
+      uploadedImages.forEach(function(src, i) {
+        var div = document.createElement('div');
+        div.className = 'image-thumb';
+        div.innerHTML = '<img src="' + src + '">' +
+          '<button class="image-thumb-remove" onclick="removeImage(' + i + ')">✕</button>';
+        row.appendChild(div);
+      });
+    }
+
+    function removeImage(i) {
+      uploadedImages.splice(i, 1);
+      renderPreviews();
+    }
+
+    // 麦克风
+    document.getElementById('micBtn').addEventListener('click', function() {
+      isRecording = !isRecording;
+      this.classList.toggle('recording', isRecording);
+      document.getElementById('dropletLabel').textContent =
+        isRecording ? 'Listening...' : 'Droplet of Consciousness';
+    });
+
+    // 发送按钮（Firebase 部分由下面的 module 填充）
+    document.getElementById('sendBtn').addEventListener('click', function() {
+      if (typeof doSend === 'function') {
+        doSend();
+      } else {
+        alert('Still loading, please try again in a moment.');
+      }
+    });
+  </script>
+
+  <!-- ② module script：只负责 Firebase，失败不影响面板 -->
+  <script type="module">
+    import { db, auth } from './firebase.js';
+    import { doc, onSnapshot, collection, addDoc, setDoc, increment, serverTimestamp }
+      from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
+    import { onAuthStateChanged, signInAnonymously }
+      from "https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js";
+
+    // 树的 8 个生长阶段，对应 animAsset/1.svg … 8.svg（按文件引用，避免内联 ~5MB base64）
+    var TREE_STAGE_COUNT = 8;
+
+    // 预加载 8 张图，保证阶段切换时不出现白屏闪烁
+    for (var i = 1; i <= TREE_STAGE_COUNT; i++) {
+      var pre = new Image();
+      pre.src = 'animAsset/' + i + '.svg';
+    }
+
+    // 双层交叉淡入：两个 <img> 图层轮流作为「进场」层
+    var treeLayers = document.querySelectorAll('#treeImg .tree-layer');
+    var activeLayer = -1;     // 当前正在显示的图层索引（-1 = 尚未渲染）
+    var currentStage = 0;     // 当前已显示的阶段（0 = 尚未渲染）
+
+    function renderTree(stage) {
+      stage = Math.max(1, Math.min(TREE_STAGE_COUNT, stage | 0));
+      if (stage === currentStage) return;   // 阶段未变化则不重播动画（onSnapshot 可能重复触发）
+      currentStage = stage;
+      var nextIndex = activeLayer === 0 ? 1 : 0;   // 轮流使用两个图层
+      var incoming = treeLayers[nextIndex];
+      var prev = activeLayer >= 0 ? treeLayers[activeLayer] : null;
+      incoming.classList.remove('show');    // 先回到隐藏态（opacity:0），作为过渡起点
+      incoming.src = 'animAsset/' + stage + '.svg';
+      void incoming.offsetWidth;            // 强制重排，让浏览器记录到 opacity:0 起始态，确保 10s 过渡每次都触发（含首屏）
+      requestAnimationFrame(function() {
+        incoming.classList.add('show');     // 进场层淡入 + 轻微放大上浮 = 生长感
+        if (prev) prev.classList.remove('show');
+      });
+      activeLayer = nextIndex;
+    }
+
+    // 网络断开时也先把树画出来，避免空白
+    renderTree(1);
+
+    // 5s 兜底：如果 Firebase 一直没回包（中国大陆常见网络问题），给个提示
+    var authTimeout = setTimeout(function() {
+      var bar = document.createElement('div');
+      bar.style.cssText = 'position:fixed; top:0; left:0; right:0; padding:10px 16px;'
+        + 'background:#fff8e1; color:#8a5a00; font-size:13px; text-align:center;'
+        + 'border-bottom:1px solid #f0d68a; z-index:300;';
+      bar.textContent = '⚠ Network is slow or Firebase is unreachable. Page is in offline preview mode.';
+      document.body.appendChild(bar);
+    }, 5000);
+
+    var unsubUser = null;
+    function subscribeTreeForUid(uid) {
+      if (unsubUser) { unsubUser(); unsubUser = null; }
+      unsubUser = onSnapshot(doc(db, 'users', uid), function(snap) {
+        var data = snap.data();
+        var count = (data && data.record_count) || 0;
+        // 每 5 条日志进一阶，共 8 阶段
+        var stage = 1;
+        if      (count >= 15) stage = 8;
+        else if (count >= 12) stage = 7;
+        else if (count >= 10) stage = 6;
+        else if (count >= 8) stage = 5;
+        else if (count >= 6) stage = 4;
+        else if (count >= 4) stage = 3;
+        else if (count >= 2)  stage = 2;
+        renderTree(stage);
+      }, function(err) {
+        console.log('tree snapshot error:', err.message);
+      });
+    }
+
+    // 取消账号 UI：改用 Firebase 匿名登录。同设备会复用同一个匿名 uid → 自动读到之前的数据。
+    // 原 localStorage 版登录检查（保留备查）：
+    // (function checkLogin() {
+    //   var lsUid = localStorage.getItem('plunk_uid');
+    //   if (!lsUid) { location.href = 'index.html'; return; }
+    //   currentUser = { uid: lsUid, email: localStorage.getItem('plunk_email') || '' };
+    //   subscribeTreeForUid(lsUid);
+    // })();
+    function startWithUid(uid) {
+      clearTimeout(authTimeout);
+      currentUser = { uid: uid, email: '' };
+      subscribeTreeForUid(uid);
+    }
+    onAuthStateChanged(auth, function(user) {
+      if (user) {
+        startWithUid(user.uid);
+      } else {
+        signInAnonymously(auth).catch(function(e) {
+          console.log('anon sign-in failed:', e.message);
+        });
+      }
+    });
+
+    // 把存储函数暴露给普通 script
+    window.doSend = async function() {
+      var content = document.getElementById('contentInput').value.trim();
+      if (!content && uploadedImages.length === 0) {
+        alert('Please write something first.');
+        return;
+      }
+      if (!currentUser) {
+        alert('Not logged in yet, please wait a moment and try again.');
+        return;
+      }
+
+      isProcessing = true;
+      document.getElementById('sendIcon').innerHTML = '<div class="spinner"></div>';
+      document.getElementById('sendBtn').disabled = true;
+
+      try {
+        await addDoc(collection(db, 'records'), {
+          user_id: currentUser.uid,
+          content: content,
+          images: uploadedImages,
+          category: selectedCategory,
+          created_at: serverTimestamp()
+        });
+        // 匿名新用户没有预先创建的 users 文档，用 setDoc + merge 创建或累加
+        await setDoc(doc(db, 'users', currentUser.uid), {
+          record_count: increment(1)
+        }, { merge: true });
+        document.getElementById('contentInput').value = '';
+        uploadedImages = [];
+        renderPreviews();
+        // 重置分类回 Mood 默认
+        selectedCategory = 'mood';
+        document.querySelectorAll('#categoryRow .cat-chip').forEach(function(c) {
+          c.classList.toggle('selected', c.getAttribute('data-cat') === 'mood');
+        });
+        closePanel();
+      } catch(e) {
+        alert('Save failed: ' + e.message);
+      } finally {
+        isProcessing = false;
+        document.getElementById('sendIcon').textContent = '➤';
+        document.getElementById('sendBtn').disabled = false;
+      }
+    };
+  </script>
+
+</body>
+</html>

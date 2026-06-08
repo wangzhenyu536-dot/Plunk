@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Plunk</title>
+  <!-- 临时跳过登录/注册：进入直接到主界面。恢复时删掉下面这段 script 即可（落地页代码原样保留） -->
+  <script>location.replace('home.html');</script>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    html, body { height: 100%; }
+    body {
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: space-between;
+      padding: 64px 28px 56px;
+    }
+    .landing-top { text-align: center; }
+    .landing-logo {
+      font-size: 12px; letter-spacing: 0.3em;
+      color: var(--text-sub); margin-bottom: 48px;
+      font-family: 'DM Sans', sans-serif;
+    }
+    .landing-title {
+      font-family: 'Georgia', serif;
+      font-size: 64px; font-weight: 400;
+      color: var(--text-dark); letter-spacing: 0.02em;
+      margin-bottom: 14px;
+    }
+    .landing-tagline {
+      font-family: 'Georgia', serif; font-style: italic;
+      font-size: 17px; color: var(--text-sub);
+      line-height: 1.6;
+    }
+    .landing-art {
+      margin: 40px auto;
+      width: 200px; height: 240px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .landing-art svg { width: 100%; height: 100%; }
+    .landing-bottom {
+      width: 100%; max-width: 360px;
+      display: flex; flex-direction: column;
+      align-items: center; gap: 16px;
+    }
+    .start-btn {
+      width: 100%; padding: 16px;
+      background: var(--btn-green); color: #fff;
+      border: none; border-radius: 50px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 16px; letter-spacing: 0.05em;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+    }
+    .start-btn:hover { background: #44551F; }
+    .start-btn:active { transform: scale(0.98); }
+    .landing-hint {
+      font-size: 12px; color: var(--text-date);
+      letter-spacing: 0.04em;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="landing-top">
+    <div class="landing-logo">✦ PLUNK</div>
+    <h1 class="landing-title">Plunk</h1>
+    <p class="landing-tagline">Your tree is waiting.</p>
+  </div>
+
+  <div class="landing-art" aria-hidden="true">
+    <svg viewBox="0 0 200 240" xmlns="http://www.w3.org/2000/svg">
+      <ellipse cx="100" cy="220" rx="68" ry="8" fill="#d6cfa7" opacity=".5"/>
+      <path d="M100 220 L100 130" stroke="#6b4f2c" stroke-width="7" stroke-linecap="round"/>
+      <path d="M100 158 L82 192 M100 178 L120 208" stroke="#6b4f2c" stroke-width="3" stroke-linecap="round"/>
+      <circle cx="100" cy="110" r="50" fill="#5d7a3a"/>
+      <circle cx="72"  cy="120" r="36" fill="#6b8a44"/>
+      <circle cx="130" cy="118" r="38" fill="#4a6741"/>
+      <circle cx="100" cy="80"  r="32" fill="#7a9a55"/>
+    </svg>
+  </div>
+
+  <div class="landing-bottom">
+    <button class="start-btn" onclick="window.location.href='log-in.html'">
+      开始 →
+    </button>
+    <span class="landing-hint">A quiet space to record your day.</span>
+  </div>
+
+</body>
+</html>

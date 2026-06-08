@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rings of Life</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    body { background: #F5F5EE; }
+
+    .page-wrap {
+      max-width: 402px;
+      margin: 0 auto;
+      padding: 0 20px 120px;
+    }
+
+    /* 顶部标题 */
+    .rings-header {
+      text-align: center;
+      padding: 40px 0 24px;
+    }
+    .rings-header h1 {
+      font-family: 'Georgia', serif;
+      font-size: 32px;
+      font-weight: 400;
+      color: #1c1917;
+      margin-bottom: 8px;
+    }
+    .rings-header p {
+      font-size: 10px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: #a8a29e;
+      font-family: sans-serif;
+    }
+
+    /* SVG 年轮区域 */
+    .rings-svg-wrap {
+      position: relative;
+      width: 100%;
+      max-width: 320px;
+      margin: 0 auto 48px;
+      aspect-ratio: 1;
+    }
+    .rings-svg-wrap svg { width: 100%; height: 100%; }
+
+    /* 年轮动画 */
+    @keyframes ringPulse {
+      0%, 100% { opacity: 0.55; transform-origin: 200px 200px; transform: scale(1); }
+      50%       { opacity: 0.15; transform-origin: 200px 200px; transform: scale(0.92); }
+    }
+    .ring-0 { animation: ringPulse 4s ease-in-out infinite; }
+    .ring-1 { animation: ringPulse 4s ease-in-out infinite 0.15s; }
+    .ring-2 { animation: ringPulse 4s ease-in-out infinite 0.30s; }
+    .ring-3 { animation: ringPulse 4s ease-in-out infinite 0.45s; }
+    .ring-4 { animation: ringPulse 4s ease-in-out infinite 0.60s; }
+    .ring-5 { animation: ringPulse 4s ease-in-out infinite 0.75s; }
+
+    @keyframes coreIn {
+      from { transform: translate(200px, 200px) scale(0); }
+      to   { transform: translate(200px, 200px) scale(1); }
+    }
+    .ring-core {
+      transform-box: fill-box;
+      transform-origin: center;
+      animation: coreIn 0.6s cubic-bezier(0.34,1.56,0.64,1) forwards;
+    }
+
+    /* 中心文字 */
+    .rings-center-text {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+    }
+    .rings-center-text .label {
+      font-size: 9px;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      color: #a8a29e;
+      font-family: sans-serif;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+    .rings-center-text .count {
+      font-family: 'Georgia', serif;
+      font-size: 40px;
+      color: #292524;
+      line-height: 1;
+    }
+
+    /* 分类卡片 */
+    .category-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+    .cat-card {
+      background: #ffffff;
+      border-radius: 24px;
+      padding: 20px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+      cursor: pointer;
+      transition: box-shadow 0.2s, transform 0.15s;
+      border: none;
+      text-align: left;
+      width: 100%;
+    }
+    .cat-card:hover {
+      box-shadow: 0 6px 24px rgba(0,0,0,0.1);
+      transform: translateY(-1px);
+    }
+    .cat-icon-wrap {
+      width: 40px; height: 40px;
+      border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 14px;
+      font-size: 18px;
+      border: 1px solid rgba(0,0,0,0.04);
+    }
+    .cat-icon-img { width: 24px; height: 24px; object-fit: contain; }
+    .cat-name {
+      font-family: 'Georgia', serif;
+      font-size: 18px;
+      color: #292524;
+      margin-bottom: 4px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .cat-name .chevron { font-size: 12px; color: #d6d3d1; }
+    .cat-count {
+      font-size: 9px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: #a8a29e;
+      font-family: sans-serif;
+      font-weight: 700;
+    }
+
+    /* 底部文字 */
+    .bottom-label {
+      text-align: center;
+      font-size: 9px;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      color: #d6d3d1;
+      font-family: sans-serif;
+      font-weight: 700;
+      margin-top: 8px;
+    }
+
+    /* 底部导航 */
+    .bottom-nav {
+      position: fixed;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 402px; max-width: 100%;
+      background: #E8E9D8;
+      display: flex; justify-content: space-around;
+      padding: 14px 0 28px;
+      border-top: 1px solid rgba(0,0,0,0.06);
+    }
+    .nav-item {
+      display: flex; flex-direction: column;
+      align-items: center; gap: 4px;
+      font-size: 10px; letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: #8A8C70; background: none;
+      border: none; cursor: pointer;
+      font-family: sans-serif; padding: 0 20px;
+    }
+    .nav-item.active { color: #3B3A2F; border-bottom: 1.5px solid #3B3A2F; padding-bottom: 2px; }
+    .nav-icon { width: 22px; height: 22px; object-fit: contain; }
+    .nav-item:not(.active) .nav-icon { opacity: .55; }
+
+    /* 分类详情视图 */
+    .detail-view { display: none; }
+    .detail-view.show { display: block; }
+    .main-view.hide { display: none; }
+
+    .back-btn {
+      display: flex; align-items: center; gap: 6px;
+      background: none; border: none; cursor: pointer;
+      font-size: 10px; letter-spacing: 0.15em;
+      text-transform: uppercase; font-weight: 700;
+      color: #a8a29e; font-family: sans-serif;
+      margin-bottom: 24px; padding: 0;
+    }
+    .back-btn:hover { color: #292524; }
+
+    .moment-card {
+      background: white; border-radius: 20px;
+      padding: 20px; margin-bottom: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+    .moment-card .moment-time {
+      font-size: 10px; color: #a8a29e;
+      font-family: sans-serif; margin-bottom: 8px;
+      letter-spacing: 0.1em;
+    }
+    .moment-card .moment-text {
+      font-family: 'Georgia', serif;
+      font-size: 16px; color: #292524; line-height: 1.6;
+      white-space: pre-wrap; word-break: break-word;
+    }
+    .moment-card .moment-images {
+      display: grid; gap: 6px;
+      grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+      margin-top: 12px;
+    }
+    .moment-card .moment-images.count-1 { grid-template-columns: 1fr; }
+    .moment-card .moment-images.count-2 { grid-template-columns: 1fr 1fr; }
+    .moment-card .moment-images.count-3,
+    .moment-card .moment-images.count-4 { grid-template-columns: 1fr 1fr; }
+    .moment-card .moment-images img {
+      width: 100%; aspect-ratio: 1 / 1;
+      object-fit: cover; border-radius: 12px;
+      display: block;
+    }
+    .empty-state {
+      text-align: center; padding: 60px 20px;
+      background: rgba(255,255,255,0.5);
+      border-radius: 24px;
+      border: 1px dashed #e7e5e4;
+    }
+    .empty-state p { color: #d6d3d1; font-style: italic; font-family: 'Georgia', serif; }
+  </style>
+</head>
+<body>
+
+<div class="page-wrap">
+
+  <!-- 主视图 -->
+  <div class="main-view" id="mainView">
+    <div class="rings-header">
+      <h1>Rings of Life</h1>
+      <p>Your consciousness patterns</p>
+    </div>
+
+    <!-- 年轮 SVG -->
+    <div class="rings-svg-wrap">
+      <svg viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg" id="ringsSvg">
+        <!-- 6 个年轮，路径由JS动态生成 -->
+        <path class="ring-0" fill="none" stroke="#A6B357" stroke-width="1.5" id="ring0"/>
+        <path class="ring-1" fill="none" stroke="#A6B357" stroke-width="1.5" id="ring1"/>
+        <path class="ring-2" fill="none" stroke="#A6B357" stroke-width="1.5" id="ring2"/>
+        <path class="ring-3" fill="none" stroke="#A6B357" stroke-width="1.5" id="ring3"/>
+        <path class="ring-4" fill="none" stroke="#A6B357" stroke-width="1.5" id="ring4"/>
+        <path class="ring-5" fill="none" stroke="#A6B357" stroke-width="1.5" id="ring5"/>
+        <!-- 中心圆 -->
+        <circle class="ring-core" cx="200" cy="200" r="15" fill="#8C7333"/>
+      </svg>
+      <div class="rings-center-text">
+        <span class="label">Life's Nectar</span>
+        <span class="count" id="totalCount">0</span>
+      </div>
+    </div>
+
+    <!-- 分类卡片 -->
+    <div class="category-grid" id="categoryGrid">
+      <!-- JS 动态生成 -->
+    </div>
+
+    <p class="bottom-label">Patterns of Being</p>
+  </div>
+
+  <!-- 分类详情视图 -->
+  <div class="detail-view" id="detailView">
+    <button class="back-btn" onclick="showMain()">← Back to Rings</button>
+    <div style="margin-bottom: 32px;">
+      <h2 id="detailTitle" style="font-family:'Georgia',serif; font-size:30px; color:#292524; margin-bottom:4px;"></h2>
+      <p style="color:#a8a29e; font-size:13px; font-style:italic; font-family:'Georgia',serif;">Recalling your reflections</p>
+    </div>
+    <div id="momentsList"></div>
+  </div>
+
+</div>
+
+<!-- 底部导航 -->
+<nav class="bottom-nav">
+  <button class="nav-item active">
+    <img class="nav-icon" src="iconAsset/place%201.svg" alt="">FOREST
+  </button>
+  <button class="nav-item" onclick="location.href='home.html'">
+    <img class="nav-icon" src="iconAsset/My%20tree.svg" alt="">GARDENING
+  </button>
+  <button class="nav-item" onclick="location.href='settings.html'">
+    <img class="nav-icon" src="iconAsset/Setting%20.svg" alt="">SETTING
+  </button>
+</nav>
+
+<script>
+  // 分类配置
+  var categories = [
+    { id: 'mood',   label: 'Mood',   img: 'iconAsset/mood%201.svg',   color: '#F87171' },
+    { id: 'social', label: 'Social', img: 'iconAsset/social%201.svg', color: '#60A5FA' },
+    { id: 'places', label: 'Places', img: 'iconAsset/place%201.svg',  color: '#34D399' },
+    { id: 'food',   label: 'Food',   img: 'iconAsset/food%201.svg',   color: '#FB923C' },
+  ];
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, function(c) {
+      return ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[c];
+    });
+  }
+
+  // 生成年轮 SVG 路径
+  function makeRingPath(ringIdx, catCounts, total) {
+    var radius = 40 + ringIdx * 30;
+    var points = 80;
+    var catCount = catCounts.length || 1;
+    var path = '';
+    for (var i = 0; i <= points; i++) {
+      var angle = (i / points) * Math.PI * 2;
+      var segSize = (Math.PI * 2) / catCount;
+      var catIdx = Math.floor(angle / segSize) % catCount;
+      var count = catCounts[catIdx] || 1;
+      var bulge = (count / (total || 1)) * 50;
+      var r = radius + Math.sin(angle * 6) * 1.5 + bulge;
+      var x = 200 + Math.cos(angle) * r;
+      var y = 200 + Math.sin(angle) * r;
+      path += (i === 0 ? 'M ' : ' L ') + x.toFixed(1) + ' ' + y.toFixed(1);
+    }
+    return path;
+  }
+
+  // 渲染分类卡片
+  function renderCategories(data, total) {
+    var grid = document.getElementById('categoryGrid');
+    grid.innerHTML = '';
+    categories.forEach(function(cat) {
+      var found = data.find(function(d) {
+        return d.category && d.category.toLowerCase() === cat.id;
+      });
+      var count = found ? found.count : 0;
+      var card = document.createElement('button');
+      card.className = 'cat-card';
+      card.innerHTML =
+        '<div class="cat-icon-wrap" style="background:' + cat.color + '18; color:' + cat.color + '">' +
+          '<img class="cat-icon-img" src="' + cat.img + '" alt="">' +
+        '</div>' +
+        '<div class="cat-name">' + cat.label + '<span class="chevron">›</span></div>' +
+        '<div class="cat-count">' + count + ' Moments</div>';
+      card.onclick = function() { showDetail(cat); };
+      grid.appendChild(card);
+    });
+  }
+
+  // 显示分类详情
+  function showDetail(cat) {
+    var records = window._allRecords || [];
+    var moments = records.filter(function(r) {
+      var c = (r.category || 'mood').toLowerCase();
+      return c === cat.id;
+    });
+    document.getElementById('detailTitle').textContent = cat.label;
+    var list = document.getElementById('momentsList');
+    list.innerHTML = '';
+    if (moments.length === 0) {
+      list.innerHTML = '<div class="empty-state"><p>No moments in this category yet.</p></div>';
+    } else {
+      moments.forEach(function(m) {
+        var date = m.created_at && m.created_at.toDate
+          ? m.created_at.toDate().toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' })
+          : '';
+        var card = document.createElement('div');
+        card.className = 'moment-card';
+
+        var html = '<div class="moment-time">' + date + '</div>';
+        if (m.content) {
+          html += '<div class="moment-text">' + escapeHtml(m.content) + '</div>';
+        }
+        if (Array.isArray(m.images) && m.images.length) {
+          var imgs = m.images.slice(0, 4);
+          html += '<div class="moment-images count-' + imgs.length + '">';
+          imgs.forEach(function(src) {
+            html += '<img src="' + src + '" alt="">';
+          });
+          html += '</div>';
+        }
+        card.innerHTML = html;
+        list.appendChild(card);
+      });
+    }
+    document.getElementById('mainView').classList.add('hide');
+    document.getElementById('detailView').classList.add('show');
+  }
+
+  function showMain() {
+    document.getElementById('mainView').classList.remove('hide');
+    document.getElementById('detailView').classList.remove('show');
+  }
+</script>
+
+<!-- Firebase：读取数据并渲染 -->
+<script type="module">
+  import { db, auth } from './firebase.js';
+  import { collection, query, where, getDocs }
+    from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
+  import { onAuthStateChanged, signInAnonymously }
+    from "https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js";
+
+  async function loadRecordsForUid(uid) {
+    var q = query(
+      collection(db, 'records'),
+      where('user_id', '==', uid)
+    );
+    var snapshot = await getDocs(q);
+    var records = [];
+    snapshot.forEach(function(doc) { records.push(doc.data()); });
+
+    var catMap = {};
+    records.forEach(function(r) {
+      var cat = (r.category || 'mood').toLowerCase();
+      catMap[cat] = (catMap[cat] || 0) + 1;
+    });
+    var catCounts = Object.entries(catMap).map(function(e) {
+      return { category: e[0], count: e[1] };
+    });
+    var total = records.length;
+
+    document.getElementById('totalCount').textContent = total;
+
+    var countArr = categories.map(function(c) {
+      var found = catCounts.find(function(d) { return d.category === c.id; });
+      return found ? found.count : 1;
+    });
+    for (var i = 0; i < 6; i++) {
+      var el = document.getElementById('ring' + i);
+      if (el) el.setAttribute('d', makeRingPath(i, countArr, total));
+    }
+
+    renderCategories(catCounts, total);
+    window._allRecords = records;
+  }
+
+  // 取消账号 UI：改用 Firebase 匿名登录。原 localStorage 版（保留备查）：
+  // (function checkLogin() {
+  //   var lsUid = localStorage.getItem('plunk_uid');
+  //   if (!lsUid) { location.href = 'index.html'; return; }
+  //   loadRecordsForUid(lsUid);
+  // })();
+  onAuthStateChanged(auth, function(user) {
+    if (user) {
+      loadRecordsForUid(user.uid);
+    } else {
+      signInAnonymously(auth).catch(function(e) {
+        console.log('anon sign-in failed:', e.message);
+      });
+    }
+  });
+</script>
+
+</body>
+</html>
